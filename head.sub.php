@@ -1,5 +1,5 @@
 <?php
-// 5.0.24
+// 5.0.25
 
 // 이 파일은 새로운 파일 생성시 반드시 포함되어야 함
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
@@ -19,8 +19,8 @@ else {
 // 게시판 제목에 ' 포함되면 오류 발생
 $g5['lo_location'] = addslashes($g5['title']);
 if (!$g5['lo_location'])
-    $g5['lo_location'] = $_SERVER['REQUEST_URI'];
-$g5['lo_url'] = $_SERVER['REQUEST_URI'];
+    $g5['lo_location'] = addslashes($_SERVER['REQUEST_URI']);
+$g5['lo_url'] = addslashes($_SERVER['REQUEST_URI']);
 if (strstr($g5['lo_url'], '/'.G5_ADMIN_DIR.'/') || $is_admin == 'super') $g5['lo_url'] = '';
 
 /*
