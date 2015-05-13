@@ -2430,12 +2430,12 @@ function googl_short_url($longUrl)
     // URL Shortener API ON
     $apiKey = $config['cf_googl_shorturl_apikey'];
 
-    $postData = array('longUrl' => $longUrl, 'key' => $apiKey);
+    $postData = array('longUrl' => $longUrl);
     $jsonData = json_encode($postData);
 
     $curlObj = curl_init();
 
-    curl_setopt($curlObj, CURLOPT_URL, 'https://www.googleapis.com/urlshortener/v1/url');
+    curl_setopt($curlObj, CURLOPT_URL, 'https://www.googleapis.com/urlshortener/v1/url?key='.$apiKey);
     curl_setopt($curlObj, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($curlObj, CURLOPT_SSL_VERIFYPEER, 0);
     curl_setopt($curlObj, CURLOPT_HEADER, 0);
@@ -2823,5 +2823,25 @@ function insert_popular($field, $str)
         $sql = " insert into {$g5['popular_table']} set pp_word = '{$str}', pp_date = '".G5_TIME_YMD."', pp_ip = '{$_SERVER['REMOTE_ADDR']}' ";
         sql_query($sql, FALSE);
     }
+}
+
+// 문자열 암호화
+function get_encrypt_string($str)
+{
+    if(defined('G5_STRING_ENCRYPT_FUNCTION') && G5_STRING_ENCRYPT_FUNCTION) {
+        $encrypt = call_user_func(G5_STRING_ENCRYPT_FUNCTION, $str);
+    } else {
+        $encrypt = sql_password($str);
+    }
+
+    return $encrypt;
+}
+
+// 비밀번호 비교
+function check_password($pass, $hash)
+{
+    $password = get_encrypt_string($pass);
+
+    return ($password === $hash);
 }
 ?>
