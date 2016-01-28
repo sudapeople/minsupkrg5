@@ -187,7 +187,7 @@ for ($i=1; $i<=count($_FILES['bf_file']['name']); $i++) {
         $shuffle = implode('', $chars_array);
 
         // 첨부파일 첨부시 첨부파일명에 공백이 포함되어 있으면 일부 PC에서 보이지 않거나 다운로드 되지 않는 현상이 있습니다. (길상여의 님 090925)
-        $upload[$i]['file'] = abs(ip2long($_SERVER['REMOTE_ADDR'])).'_'.substr($shuffle,0,8).'_'.str_replace('%', '', urlencode(str_replace(' ', '_', $filename)));
+        $upload[$i]['file'] = abs(ip2long($_SERVER['REMOTE_ADDR'])).'_'.substr($shuffle,0,8).'_'.replace_filename($filename);
 
         $dest_file = G5_DATA_PATH.'/qa/'.$upload[$i]['file'];
 
@@ -217,7 +217,7 @@ if($w == '' || $w == 'a' || $w == 'r') {
     $sql = " insert into {$g5['qa_content_table']}
                 set qa_num          = '$qa_num',
                     mb_id           = '{$member['mb_id']}',
-                    qa_name         = '{$member['mb_nick']}',
+                    qa_name         = '".addslashes($member['mb_nick'])."',
                     qa_email        = '$qa_email',
                     qa_hp           = '$qa_hp',
                     qa_type         = '$qa_type',
@@ -244,7 +244,7 @@ if($w == '' || $w == 'a' || $w == 'r') {
     sql_query($sql);
 
     if($w == '' || $w == 'r') {
-        $qa_id = mysql_insert_id();
+        $qa_id = sql_insert_id();
 
         if($w == 'r' && $write['qa_related']) {
             $qa_related = $write['qa_related'];
@@ -300,33 +300,100 @@ if($w == '' || $w == 'a' || $w == 'r') {
 
 // SMS 알림
 if($config['cf_sms_use'] == 'icode' && $qaconfig['qa_use_sms']) {
-    include_once(G5_LIB_PATH.'/icode.sms.lib.php');
+    if($config['cf_sms_type'] == 'LMS') {
+        include_once(G5_LIB_PATH.'/icode.lms.lib.php');
 
-    // 답변글은 질문 등록자에게 전송
-    if($w == 'a' && $write['qa_sms_recv'] && trim($write['qa_hp'])) {
-        $sms_content = $config['cf_title'].' '.$qaconfig['qa_title'].'에 답변이 등록되었습니다.';
-        $send_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_send_number']);
-        $recv_number = preg_replace('/[^0-9]/', '', $write['qa_hp']);
+        $port_setting = get_icode_port_type($config['cf_icode_id'], $config['cf_icode_pw']);
 
-        if($recv_number) {
-            $SMS = new SMS; // SMS 연결
-            $SMS->SMS_con($config['cf_icode_server_ip'], $config['cf_icode_id'], $config['cf_icode_pw'], $config['cf_icode_server_port']);
-            $SMS->Add($recv_number, $send_number, $config['cf_icode_id'], iconv("utf-8", "euc-kr", stripslashes($sms_content)), "");
-            $SMS->Send();
+        // SMS 모듈 클래스 생성
+        if($port_setting !== false) {
+            // 답변글은 질문 등록자에게 전송
+            if($w == 'a' && $write['qa_sms_recv'] && trim($write['qa_hp'])) {
+                $sms_content = $config['cf_title'].' '.$qaconfig['qa_title'].'에 답변이 등록되었습니다.';
+                $send_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_send_number']);
+                $recv_number = preg_replace('/[^0-9]/', '', $write['qa_hp']);
+
+                if($recv_number) {
+                    $strDest     = array();
+                    $strDest[]   = $recv_number;
+                    $strCallBack = $send_number;
+                    $strCaller   = iconv_euckr(trim($config['cf_title']));
+                    $strSubject  = '';
+                    $strURL      = '';
+                    $strData     = iconv_euckr($sms_content);
+                    $strDate     = '';
+                    $nCount      = count($strDest);
+
+                    $SMS = new LMS;
+                    $SMS->SMS_con($config['cf_icode_server_ip'], $config['cf_icode_id'], $config['cf_icode_pw'], $port_setting);
+                    $res = $SMS->Add($strDest, $strCallBack, $strCaller, $strSubject, $strURL, $strData, $strDate, $nCount);
+
+                    if($res) {
+                        $SMS->Send();
+                    }
+
+                    $SMS->Init(); // 보관하고 있던 결과값을 지웁니다.
+                }
+            }
+
+            // 문의글 등록시 관리자에게 전송
+            if(($w == '' || $w == 'r') && trim($qaconfig['qa_admin_hp'])) {
+                $sms_content = $config['cf_title'].' '.$qaconfig['qa_title'].'에 문의글이 등록되었습니다.';
+                $send_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_send_number']);
+                $recv_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_admin_hp']);
+
+                if($recv_number) {
+                    $strDest     = array();
+                    $strDest[]   = $recv_number;
+                    $strCallBack = $send_number;
+                    $strCaller   = iconv_euckr(trim($config['cf_title']));;
+                    $strSubject  = '';
+                    $strURL      = '';
+                    $strData     = iconv_euckr($sms_content);
+                    $strDate     = '';
+                    $nCount      = count($strDest);
+
+                    $SMS = new LMS;
+                    $SMS->SMS_con($config['cf_icode_server_ip'], $config['cf_icode_id'], $config['cf_icode_pw'], $port_setting);
+                    $res = $SMS->Add($strDest, $strCallBack, $strCaller, $strSubject, $strURL, $strData, $strDate, $nCount);
+
+                    if($res) {
+                        $SMS->Send();
+                    }
+
+                    $SMS->Init(); // 보관하고 있던 결과값을 지웁니다.
+                }
+            }
         }
-    }
+    } else {
+        include_once(G5_LIB_PATH.'/icode.sms.lib.php');
 
-    // 문의글 등록시 관리자에게 전송
-    if(($w == '' || $w == 'r') && trim($qaconfig['qa_admin_hp'])) {
-        $sms_content = $config['cf_title'].' '.$qaconfig['qa_title'].'에 문의글이 등록되었습니다.';
-        $send_number = preg_replace('/[^0-9]/', '', $qa_hp);
-        $recv_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_admin_hp']);
+        // 답변글은 질문 등록자에게 전송
+        if($w == 'a' && $write['qa_sms_recv'] && trim($write['qa_hp'])) {
+            $sms_content = $config['cf_title'].' '.$qaconfig['qa_title'].'에 답변이 등록되었습니다.';
+            $send_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_send_number']);
+            $recv_number = preg_replace('/[^0-9]/', '', $write['qa_hp']);
 
-        if($recv_number) {
-            $SMS = new SMS; // SMS 연결
-            $SMS->SMS_con($config['cf_icode_server_ip'], $config['cf_icode_id'], $config['cf_icode_pw'], $config['cf_icode_server_port']);
-            $SMS->Add($recv_number, $send_number, $config['cf_icode_id'], iconv("utf-8", "euc-kr", stripslashes($sms_content)), "");
-            $SMS->Send();
+            if($recv_number) {
+                $SMS = new SMS; // SMS 연결
+                $SMS->SMS_con($config['cf_icode_server_ip'], $config['cf_icode_id'], $config['cf_icode_pw'], $config['cf_icode_server_port']);
+                $SMS->Add($recv_number, $send_number, $config['cf_icode_id'], iconv("utf-8", "euc-kr", stripslashes($sms_content)), "");
+                $SMS->Send();
+            }
+        }
+
+        // 문의글 등록시 관리자에게 전송
+        if(($w == '' || $w == 'r') && trim($qaconfig['qa_admin_hp'])) {
+            $sms_content = $config['cf_title'].' '.$qaconfig['qa_title'].'에 문의글이 등록되었습니다.';
+            $send_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_send_number']);
+            $recv_number = preg_replace('/[^0-9]/', '', $qaconfig['qa_admin_hp']);
+
+            if($recv_number) {
+                $SMS = new SMS; // SMS 연결
+                $SMS->SMS_con($config['cf_icode_server_ip'], $config['cf_icode_id'], $config['cf_icode_pw'], $config['cf_icode_server_port']);
+                $SMS->Add($recv_number, $send_number, $config['cf_icode_id'], iconv("utf-8", "euc-kr", stripslashes($sms_content)), "");
+                $SMS->Send();
+            }
         }
     }
 }
@@ -336,7 +403,7 @@ if($w == 'a' && $write['qa_email_recv'] && trim($write['qa_email'])) {
     include_once(G5_LIB_PATH.'/mailer.lib.php');
 
     $subject = $config['cf_title'].' '.$qaconfig['qa_title'].' 답변 알림 메일';
-    $content = nl2br(conv_unescape_nl($qa_content));
+    $content = nl2br(conv_unescape_nl(stripslashes($qa_content)));
 
     mailer($config['cf_admin_email_name'], $config['cf_admin_email'], $write['qa_email'], $subject, $content, 1);
 }
@@ -346,7 +413,7 @@ if(($w == '' || $w == 'r') && trim($qaconfig['qa_admin_email'])) {
     include_once(G5_LIB_PATH.'/mailer.lib.php');
 
     $subject = $config['cf_title'].' '.$qaconfig['qa_title'].' 질문 알림 메일';
-    $content = nl2br(conv_unescape_nl($qa_content));
+    $content = nl2br(conv_unescape_nl(stripslashes($qa_content)));
 
     mailer($config['cf_admin_email_name'], $qa_email, $qaconfig['qa_admin_email'], $subject, $content, 1);
 }

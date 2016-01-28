@@ -10,6 +10,8 @@ if ($W == 'd')
 else
     auth_check($auth[$sub_menu], "w");
 
+check_admin_token();
+
 $sql_common = " fa_subject = '$fa_subject',
                 fa_content = '$fa_content',
                 fa_order = '$fa_order' ";
@@ -21,7 +23,7 @@ if ($w == "")
                     $sql_common ";
     sql_query($sql);
 
-    $fa_id = mysql_insert_id();
+    $fa_id = sql_insert_id();
 }
 else if ($w == "u")
 {

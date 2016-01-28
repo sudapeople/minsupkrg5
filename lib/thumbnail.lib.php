@@ -1,7 +1,7 @@
 <?php
 if (!defined('_GNUBOARD_')) exit;
 
-@ini_set('memory_limit', '512M');
+@ini_set('memory_limit', '-1');
 
 // 게시글리스트 썸네일 생성
 function get_list_thumbnail($bo_table, $wr_id, $thumb_width, $thumb_height, $is_create=false, $is_crop=true, $crop_mode='center', $is_sharpen=false, $um_value='80/0.5/3')
@@ -59,15 +59,19 @@ function get_list_thumbnail($bo_table, $wr_id, $thumb_width, $thumb_height, $is_
 
     if($tname) {
         if($edt) {
+            // 오리지날 이미지
+            $ori = G5_URL.$data_path;
+            // 썸네일 이미지
             $src = G5_URL.str_replace($filename, $tname, $data_path);
         } else {
+            $ori = G5_DATA_URL.'/file/'.$bo_table.'/'.$filename;
             $src = G5_DATA_URL.'/file/'.$bo_table.'/'.$tname;
         }
     } else {
         return false;
     }
 
-    $thumb = array("src"=>$src, "alt"=>$alt);
+    $thumb = array("src"=>$src, "ori"=>$ori, "alt"=>$alt);
 
     return $thumb;
 }
@@ -470,7 +474,7 @@ and the roundoff errors in the Gaussian blur process, are welcome.
 
     $radius = abs(round($radius));     // Only integers make sense.
     if ($radius == 0) {
-        return $img; imagedestroy($img); break;        }
+        return $img; imagedestroy($img);        }
     $w = imagesx($img); $h = imagesy($img);
     $imgCanvas = imagecreatetruecolor($w, $h);
     $imgBlur = imagecreatetruecolor($w, $h);

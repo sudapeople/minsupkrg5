@@ -7,6 +7,17 @@ $g5['title'] = '게시글 저장';
 
 $msg = array();
 
+if($board['bo_use_category']) {
+    $ca_name = trim($_POST['ca_name']);
+    if(!$ca_name) {
+        $msg[] = '<strong>분류</strong>를 선택하세요.';
+    } else {
+        $categories = array_map('trim', explode("|", $board['bo_category_list'].($is_admin ? '|공지' : '')));
+        if(!empty($categories) && !in_array($ca_name, $categories))
+            $msg[] = '분류를 올바르게 입력하세요.';
+    }
+}
+
 $wr_subject = '';
 if (isset($_POST['wr_subject'])) {
     $wr_subject = substr(trim($_POST['wr_subject']),0,255);
@@ -244,7 +255,7 @@ if ($w == '' || $w == 'r') {
                      wr_10 = '$wr_10' ";
     sql_query($sql);
 
-    $wr_id = mysql_insert_id();
+    $wr_id = sql_insert_id();
 
     // 부모 아이디에 UPDATE
     sql_query(" update $write_table set wr_parent = '$wr_id' where wr_id = '$wr_id' ");
@@ -485,7 +496,7 @@ for ($i=0; $i<count($_FILES['bf_file']['name']); $i++) {
         $shuffle = implode('', $chars_array);
 
         // 첨부파일 첨부시 첨부파일명에 공백이 포함되어 있으면 일부 PC에서 보이지 않거나 다운로드 되지 않는 현상이 있습니다. (길상여의 님 090925)
-        $upload[$i]['file'] = abs(ip2long($_SERVER['REMOTE_ADDR'])).'_'.substr($shuffle,0,8).'_'.str_replace('%', '', urlencode(str_replace(' ', '_', $filename)));
+        $upload[$i]['file'] = abs(ip2long($_SERVER['REMOTE_ADDR'])).'_'.substr($shuffle,0,8).'_'.replace_filename($filename);
 
         $dest_file = G5_DATA_PATH.'/file/'.$bo_table.'/'.$upload[$i]['file'];
 
@@ -596,7 +607,7 @@ if (!($w == 'u' || $w == 'cu') && $config['cf_email_use'] && $board['bo_use_emai
     else if (strstr($html, 'html2'))
         $tmp_html = 2;
 
-    $wr_content = conv_content(conv_unescape_nl($wr_content), $tmp_html);
+    $wr_content = conv_content(conv_unescape_nl(stripslashes($wr_content)), $tmp_html);
 
     $warr = array( ''=>'입력', 'u'=>'수정', 'r'=>'답변', 'c'=>'코멘트', 'cu'=>'코멘트 수정' );
     $str = $warr[$w];

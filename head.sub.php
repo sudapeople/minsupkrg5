@@ -1,16 +1,14 @@
 <?php
-// 5.0.42
-
 // 이 파일은 새로운 파일 생성시 반드시 포함되어야 함
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
-$begin_time = get_microtime();
-
-// 사용자가 지정한 head.sub.php 파일이 있다면 include
-if(defined('G5_HEAD_SUB_FILE') && is_file(G5_PATH.'/'.G5_HEAD_SUB_FILE)) {
-    include_once(G5_PATH.'/'.G5_HEAD_SUB_FILE);
+// 테마 head.sub.php 파일
+if(!defined('G5_IS_ADMIN') && defined('G5_THEME_PATH') && is_file(G5_THEME_PATH.'/head.sub.php')) {
+    require_once(G5_THEME_PATH.'/head.sub.php');
     return;
 }
+
+$begin_time = get_microtime();
 
 if (!isset($g5['title'])) {
     $g5['title'] = $config['cf_title'];
@@ -56,7 +54,8 @@ if($config['cf_add_meta'])
 <title><?php echo $g5_head_title; ?></title>
 <?php
 if (defined('G5_IS_ADMIN')) {
-    echo '<link rel="stylesheet" href="'.G5_ADMIN_URL.'/css/admin.css">'.PHP_EOL;
+    if(!defined('_THEME_PREVIEW_'))
+        echo '<link rel="stylesheet" href="'.G5_ADMIN_URL.'/css/admin.css">'.PHP_EOL;
 } else {
     echo '<link rel="stylesheet" href="'.G5_CSS_URL.'/'.(G5_IS_MOBILE?'mobile':'default').'.css">'.PHP_EOL;
 }
@@ -101,7 +100,7 @@ if ($is_member) { // 회원이라면 로그인 중이라는 메세지를 출력�
     else if ($is_admin == 'group') $sr_admin_msg = "그룹관리자 ";
     else if ($is_admin == 'board') $sr_admin_msg = "게시판관리자 ";
 
-    echo '<div id="hd_login_msg">'.$sr_admin_msg.$member['mb_nick'].'님 로그인 중 ';
+    echo '<div id="hd_login_msg">'.$sr_admin_msg.get_text($member['mb_nick']).'님 로그인 중 ';
     echo '<a href="'.G5_BBS_URL.'/logout.php">로그아웃</a></div>';
 }
 ?>
